@@ -1,13 +1,18 @@
 import pygame
 import sys
+import random
 
 # SETUP & CONFIGURATION CONSTANTS
 WIDTH, HEIGHT = 800, 600
 FPS = 60
 
 # GLOBAL PHYSICAL CONSTANTS
-G = 6.6743e-11 # Gravitational Constant
+G = 1.0 # 6.6743e-11 Gravitational Constant
 #IMF(m) = m**-2.35
+
+
+
+
 
 # PHYSICS ENTITY CLASS
 class StarParticle:
@@ -19,7 +24,10 @@ class StarParticle:
         self.vx = float(vx)
         self.vy = float(vy)
         self.mass = float(mass)
-        #self.radius = ##render pixel size (derived from mass)  
+        self.radius = 10 ##render pixel size (derived from mass)  
+
+    def __repr__(self):
+        return str([round(self.x, 2), round(self.y, 2), round(self.vx, 2), round(self.vy, 2), round(self.mass, 2)])
     
     # Physics calculation methods
     def calculate_acceleration(self):
@@ -28,7 +36,7 @@ class StarParticle:
         takes position (r) parameters and calculates the new acceration experienced by
         the orbiting body. (a = - GM * r / ||r||^3) derived from ma = -GMm / r^2
         """
-        
+
         return a
 
     def calculate_velocity(self):
@@ -63,6 +71,42 @@ class StarParticle:
 
 
 
+
+# POPULATION ENTITY CLASS
+class ParticlePopulation:
+    """ Generates and maintains a list of distinct particles of varying masses, positions and velocities """
+    def __init__(self):
+        self.population = []
+
+    def __repr__(self):
+        return str(self.population)
+
+    def generate_random_particle(self, pos_range=(0, 600), vel_range=(-10.0, 10.0), mass_range=(0.1, 10.0)):
+        """ Generates a single particle with random values within specified limits. """
+        mass = random.uniform(*mass_range)
+        
+        # Generate 2D coordinates for position and velocity
+        position = [random.uniform(*pos_range) for _ in range(2)]
+        x = position[0]
+        y = position[1]
+
+        velocity = [random.uniform(*vel_range) for _ in range(2)]
+        vx = velocity[0]
+        vy = velocity[1]
+
+        # Generates new partical and adds it to the population
+        new_particle = StarParticle(x, y, vx, vy, mass)
+        self.population.append(new_particle)
+
+    def generate_multiple(self, count, **kwargs):
+        """ Helper to generate many particles at once. """
+        for i in range(count):
+            self.generate_random_particle(**kwargs)
+
+
+
+
+
 # MAIN SIMULATION LOOP
 def main():
     pygame.init()
@@ -71,7 +115,9 @@ def main():
     clock = pygame.time.Clock()
 
     # Instantiate our physics object(s)
-    ## create list of particles
+    test = ParticlePopulation()
+    test.generate_multiple(count=10)
+    print(test)
     
     running = True
     while running:
@@ -82,11 +128,14 @@ def main():
 
         # B. PHYSICS & LOGIC UPDATES
         ## class methods to run calculations and update new positions and velocities
+        
 
 
         # C. RENDERING (Clear -> Draw -> Flip)
         screen.fill((30, 30, 30))  # Clear screen with dark gray
         ## _.draw here
+        for i in test.population:
+                    i.draw(screen)
         pygame.display.flip()      # Refresh display
 
         # D. TIME STEP CONTROL
