@@ -102,6 +102,8 @@ class Particle:
         self.scale_z = SCREEN_SIZE * (self.z / BOX_DIMENSIONS)
         
         self.draw_radius = 0.2 * (self.mass * (self.scale_z + 800) / SCREEN_SIZE / 1.5e29) # scales draw_radius with mass AND distance from viewer
+        if self.draw_radius < 1.0:
+            self.draw_radius = 1.0
 
         if self.scale_z > 0.0 and self.scale_z < SCREEN_SIZE:
             self.color[0] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # R-channel
