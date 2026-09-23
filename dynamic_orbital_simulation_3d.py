@@ -17,7 +17,7 @@ METERS_PER_LY = 9.461e15
 
 # FUNCTIONAL CONSTANTS
 POPULATION_SIZE = 200
-dt = 10000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+dt = 100000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
 BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
 SOFTENING = 1e16
 THREE_D = True
