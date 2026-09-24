@@ -17,8 +17,8 @@ METERS_PER_LY = 9.461e15
 
 # PHYSICAL ENVIRONMENTAL CONSTANTS
 THREE_D = True
-POPULATION_SIZE = 60
-dt = 10000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+POPULATION_SIZE = 100
+dt = 100000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
 BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
 
 # FUNCTIONAL CONSTANTS
@@ -146,8 +146,21 @@ class Particle:
         pygame.draw.circle(surface, self.color, render_pos, self.draw_radius)
 
     def draw_trails(self, surface):
+        trail_color = [0, 0, 0]
+        trail_color_z = trail_color
         for i in self.trailing_data:
-            pygame.draw.line(surface, TRAIL_COLOR, i[0], i[1], width=2)
+            pygame.draw.line(surface, trail_color_z, i[0], i[1], width=1)
+            if trail_color_z[0] < TRAIL_COLOR[0]:
+                trail_color[0] += 1
+                trail_color[1] += 1
+                trail_color[2] += 1
+                trail_color_z = [abs(int(trail_color[0]) * (self.scale_z / SCREEN_SIZE)),
+                                 abs(int(trail_color[1]) * (self.scale_z / SCREEN_SIZE)),
+                                 abs(int(trail_color[2]) * (self.scale_z / SCREEN_SIZE))
+                                 ]
+            else:
+                pass
+
 
 # POPULATION ENTITY CLASS
 class ParticlePopulation:
