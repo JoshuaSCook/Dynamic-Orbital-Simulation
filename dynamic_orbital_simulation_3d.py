@@ -255,6 +255,9 @@ def main():
                 cluster.population[k].x -= MOVEMENT_FACTOR
             x_offset -= SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
 
+        ## unfortunately the way this is set up alters and affects the physics
+        ## i need to totally rething the zoom from the ground up
+        ## the arrow keys should be fine as is since theyre just applying translation
         if keys[pygame.K_EQUALS]:
             for k in range(len(cluster.population)):
                 cluster.population[k].z += MOVEMENT_FACTOR
@@ -328,3 +331,7 @@ if __name__ == "__main__":
 ## Model in 3 dimensions
 ## Add redshift coloration
 ## Zoom and translational controls
+## Add write capibility for data capture (.csv) - allows for slower heavier processing
+##   that can be loaded back in and "replayed" in real-time.
+## Create matplotlib capibilities and explore properties and phenomenon that
+##   that emerge from the physics.
