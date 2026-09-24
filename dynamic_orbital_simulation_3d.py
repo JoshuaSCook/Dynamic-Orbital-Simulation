@@ -16,11 +16,14 @@ SECONDS_PER_YEAR = 3.154e7
 METERS_PER_LY = 9.461e15
 
 # FUNCTIONAL CONSTANTS
-POPULATION_SIZE = 200
-dt = 100000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+POPULATION_SIZE = 240
+dt = 10000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
 BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
 SOFTENING = 1e16
 THREE_D = True
+MOVEMENT_FACTOR = BOX_DIMENSIONS / 200
+CELL_SIZE = SCREEN_SIZE / 10            # Size of each grid square (640 / 40 = 16 cells wide/high)
+GRID_COLOR = (30, 30, 30)        # Grid line color
 
 
 # CLASSES
@@ -189,6 +192,19 @@ def bounded_exponential_decay(a, b, lambd=2.35):
             return x
 
 
+def draw_grid_lines(screen, x_offset, y_offset):
+    start_x = int(x_offset % CELL_SIZE)
+    start_y = int(y_offset % CELL_SIZE)
+
+    # Draw vertical lines from top to bottom
+    for x in range(start_x, SCREEN_SIZE + int(CELL_SIZE), int(CELL_SIZE)):
+        pygame.draw.line(screen, GRID_COLOR, (x, 0), (x, SCREEN_SIZE))
+        
+    # Draw horizontal lines from left to right
+    for y in range(start_y, SCREEN_SIZE + int(CELL_SIZE), int(CELL_SIZE)):
+        pygame.draw.line(screen, GRID_COLOR, (0, y), (SCREEN_SIZE, y))
+
+
 # MAIN SIMULATION LOOP
 ################################################################
 
@@ -202,6 +218,9 @@ def main():
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("Arial", 24)
     t_elapsed = 0.0
+    x_offset = 0.0
+    y_offset = 0.0
+    global CELL_SIZE
 
     # Instantiate our physics object(s)
     cluster = ParticlePopulation()
@@ -213,6 +232,43 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_UP]:
+            for k in range(len(cluster.population)):
+                cluster.population[k].y += MOVEMENT_FACTOR
+            y_offset += SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
+
+        if keys[pygame.K_DOWN]:
+            for k in range(len(cluster.population)):
+                cluster.population[k].y -= MOVEMENT_FACTOR
+            y_offset -= SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
+
+        if keys[pygame.K_LEFT]:
+            for k in range(len(cluster.population)):
+                cluster.population[k].x += MOVEMENT_FACTOR
+            x_offset += SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
+
+        if keys[pygame.K_RIGHT]:
+            for k in range(len(cluster.population)):
+                cluster.population[k].x -= MOVEMENT_FACTOR
+            x_offset -= SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
+
+        if keys[pygame.K_EQUALS]:
+            for k in range(len(cluster.population)):
+                cluster.population[k].z += MOVEMENT_FACTOR
+                cluster.population[k].x *= 1.01
+                cluster.population[k].y *= 1.01
+            CELL_SIZE = CELL_SIZE * 1.01
+
+        if keys[pygame.K_MINUS]:
+            for k in range(len(cluster.population)):
+                cluster.population[k].z -= MOVEMENT_FACTOR
+                cluster.population[k].x /= 1.01
+                cluster.population[k].y /= 1.01
+            CELL_SIZE = CELL_SIZE / 1.01
+            
 
         # CALCULATE AND RENDER FPS
         current_fps = clock.get_fps()
@@ -238,6 +294,7 @@ def main():
 
         # RENDERING (Clear -> Draw -> Flip)
         screen.fill((10, 10, 10))  # Clear screen with dark gray
+        draw_grid_lines(screen, x_offset, y_offset)
         # _.draw here
         for i in cluster.population:
             i.draw(screen)
