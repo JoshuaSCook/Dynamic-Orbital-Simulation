@@ -9,21 +9,25 @@ import scipy.integrate as integrate
 SCREEN_SIZE = 1000
 FPS = 60
 
-# GLOBAL PHYSICAL CONSTANTS
+# PHYSICAL CONSTANTS
 G = 6.6743e-11 # Gravitational Constant
 SOLAR_MASS = 1.989e30
 SECONDS_PER_YEAR = 3.154e7
 METERS_PER_LY = 9.461e15
 
-# FUNCTIONAL CONSTANTS
-POPULATION_SIZE = 240
+# PHYSICAL ENVIRONMENTAL CONSTANTS
+THREE_D = True
+POPULATION_SIZE = 60
 dt = 10000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
 BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
+
+# FUNCTIONAL CONSTANTS
 SOFTENING = 1e16
-THREE_D = True
-MOVEMENT_FACTOR = BOX_DIMENSIONS / 200
-CELL_SIZE = SCREEN_SIZE / 10            # Size of each grid square (640 / 40 = 16 cells wide/high)
-GRID_COLOR = (30, 30, 30)        # Grid line color
+MOVEMENT_FACTOR = BOX_DIMENSIONS / 200 # Determines rate at which the space moves when using the translational arrow keys
+CELL_SIZE = SCREEN_SIZE / 10 # Size of each grid square (640 / 40 = 16 cells wide/high)
+BACKGROUND_COLOR = (0, 0, 0)
+GRID_COLOR = (40, 40, 40)
+TRAIL_COLOR = (100, 100, 100)
 
 
 # CLASSES
@@ -49,8 +53,14 @@ class Particle:
         self.scale_x = 0.0
         self.scale_y = 0.0
         self.scale_z = 0.0
+        self.x_scale_factor = 1.0
+        self.y_scale_factor = 1.0
         self.draw_radius = 0.0 # interger render pixel size (derived from mass)
         self.color = [0, 0, 0]
+
+        self.trailing_data_initial_point = [0.0, 0.0]
+        self.trailing_data = []
+        self.trailing_data_length = 100 # how long is the tail
 
     # Physics calculation methods
     def update_acceleration(self, x_m, y_m, z_m, mass_m):
@@ -100,18 +110,34 @@ class Particle:
         self.z += vdtz
 
         # Scales the position coordinates to fit the screen size
-        self.scale_x = SCREEN_SIZE * (self.x / BOX_DIMENSIONS)
-        self.scale_y = SCREEN_SIZE * (self.y / BOX_DIMENSIONS)
+        self.scale_x = self.x_scale_factor * SCREEN_SIZE * (self.x / BOX_DIMENSIONS)
+        self.scale_y = self.y_scale_factor * SCREEN_SIZE * (self.y / BOX_DIMENSIONS)
         self.scale_z = SCREEN_SIZE * (self.z / BOX_DIMENSIONS)
+
+        self.trailing_data_initial_point = [self.scale_x, self.scale_y]
         
         self.draw_radius = 0.2 * (self.mass * (self.scale_z + 800) / SCREEN_SIZE / 1.5e29) # scales draw_radius with mass AND distance from viewer
         if self.draw_radius < 1.0:
             self.draw_radius = 1.0
 
-        if self.scale_z > 0.0 and self.scale_z < SCREEN_SIZE:
+        if self.scale_z >= 0.0 and self.scale_z <= SCREEN_SIZE:
             self.color[0] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # R-channel
             self.color[1] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # B-channel
             self.color[2] = abs(int(220 * (self.scale_z / SCREEN_SIZE))) # G-channel            
+
+    def update_trailing_data(self):
+        """"""
+        # UPDATE TRAILING DATA LIST
+        # Initial line
+        if len(self.trailing_data) == 0:
+            self.trailing_data.append([self.trailing_data_initial_point, [self.scale_x, self.scale_y]])
+        
+        elif len(self.trailing_data) < self.trailing_data_length:
+            self.trailing_data.append([self.trailing_data[-1][1], [self.scale_x, self.scale_y]])
+        
+        else:
+            del self.trailing_data[0]
+            self.trailing_data.append([self.trailing_data[-1][1], [self.scale_x, self.scale_y]])            
 
     # Render to screen
     def draw(self, surface):
@@ -119,6 +145,9 @@ class Particle:
         render_pos = (int(self.scale_x), int(self.scale_y))
         pygame.draw.circle(surface, self.color, render_pos, self.draw_radius)
 
+    def draw_trails(self, surface):
+        for i in self.trailing_data:
+            pygame.draw.line(surface, TRAIL_COLOR, i[0], i[1], width=2)
 
 # POPULATION ENTITY CLASS
 class ParticlePopulation:
@@ -136,14 +165,14 @@ class ParticlePopulation:
         mass_scale = bounded_exponential_decay(a_scale, b_scale, lambd=2.35)
         mass = mass_scale * SOLAR_MASS        
         
-        # Generate 3D coordinates for position and velocity
+        # Generate 3D/2D coordinates for position and velocity
         position = [random.uniform(*pos_range) for _ in range(3)]
         x = position[0]
         y = position[1]
         if THREE_D == True:
             z = position[2]
         else:
-            z = 0.0
+            z = BOX_DIMENSIONS
 
         velocity = [random.uniform(*vel_range) for _ in range(3)]
         vx = velocity[0]
@@ -221,6 +250,7 @@ def main():
     x_offset = 0.0
     y_offset = 0.0
     global CELL_SIZE
+    global TRAIL_COLOR
 
     # Instantiate our physics object(s)
     cluster = ParticlePopulation()
@@ -261,16 +291,17 @@ def main():
         if keys[pygame.K_EQUALS]:
             for k in range(len(cluster.population)):
                 cluster.population[k].z += MOVEMENT_FACTOR
-                cluster.population[k].x *= 1.01
-                cluster.population[k].y *= 1.01
+                cluster.population[k].x_scale_factor *= 1.01
+                cluster.population[k].y_scale_factor *= 1.01
             CELL_SIZE = CELL_SIZE * 1.01
 
         if keys[pygame.K_MINUS]:
             for k in range(len(cluster.population)):
                 cluster.population[k].z -= MOVEMENT_FACTOR
-                cluster.population[k].x /= 1.01
-                cluster.population[k].y /= 1.01
+                cluster.population[k].x_scale_factor /= 1.01
+                cluster.population[k].y_scale_factor /= 1.01
             CELL_SIZE = CELL_SIZE / 1.01
+
             
 
         # CALCULATE AND RENDER FPS
@@ -294,12 +325,18 @@ def main():
             cluster.population[k].ax = 0.0
             cluster.population[k].ay = 0.0
             cluster.population[k].az = 0.0
+            cluster.population[k].update_trailing_data()
+
 
         # RENDERING (Clear -> Draw -> Flip)
-        screen.fill((10, 10, 10))  # Clear screen with dark gray
+        screen.fill(BACKGROUND_COLOR)  # Clear screen with dark gray
         draw_grid_lines(screen, x_offset, y_offset)
         # _.draw here
         for i in cluster.population:
+            if not any(keys):
+                i.draw_trails(screen)
+            else:
+                i.trailing_data = []
             i.draw(screen)
         screen.blit(fps_text, (10, 10))
         screen.blit(t_elapsed_text, (10, 40))
