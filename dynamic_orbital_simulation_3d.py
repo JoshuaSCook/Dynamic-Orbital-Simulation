@@ -18,7 +18,7 @@ METERS_PER_LY = 9.461e15
 # PHYSICAL ENVIRONMENTAL CONSTANTS
 THREE_D = True
 POPULATION_SIZE = 100
-dt = 100000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+dt = 50000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
 BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
 
 # FUNCTIONAL CONSTANTS
@@ -60,7 +60,7 @@ class Particle:
 
         self.trailing_data_initial_point = [0.0, 0.0]
         self.trailing_data = []
-        self.trailing_data_length = 100 # how long is the tail
+        self.trailing_data_length = 250 # how long is the tail
 
     # Physics calculation methods
     def update_acceleration(self, x_m, y_m, z_m, mass_m):
@@ -271,6 +271,7 @@ def main():
     
     running = True
     while running:
+        
         # EVENT HANDLING
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -315,7 +316,6 @@ def main():
                 cluster.population[k].y_scale_factor /= 1.01
             CELL_SIZE = CELL_SIZE / 1.01
 
-            
 
         # CALCULATE AND RENDER FPS
         current_fps = clock.get_fps()
@@ -365,23 +365,41 @@ if __name__ == "__main__":
     main()
 
 
-
-
 ## FUTURE IMPROVEMENTS
 ##
-## Code in IMF for initializing populaiton
-## Rework with real-world units and scale to fit screen as needed
-## Code in some preset systems - i.e. a stable solar system (need to determine initial starting conditions)
-## Create ghost trails for particles
+## Code in some preset systems - i.e. a stable solar system (need to determine initial starting conditions
 ## Fix FPS issues. sim can run at whatever speed dt*CPS (calculations/sec) but only update the screen at 60 FPS
 ## ---- Define what we want on the screen - i.e. 100,000 yrs per sec
 ## ---- Years per rendered frame = target rate / FPS i.e. 100,000/60 = 1666.7 yrs
 ## ---- Now we need to figure out how many calculations per sec to match the dt time interval
 ## ---- rendered frame rate / dt should give the loop CPS
-## Model in 3 dimensions
 ## Add redshift coloration
-## Zoom and translational controls
 ## Add write capibility for data capture (.csv) - allows for slower heavier processing
-##   that can be loaded back in and "replayed" in real-time.
+## - that can be loaded back in and "replayed" in real-time
 ## Create matplotlib capibilities and explore properties and phenomenon that
-##   that emerge from the physics.
+## - that emerge from the physics
+## Use real-world GAIA data sets of stellar motions within known star clusters to predict future kinematics and
+## - and measure various emergent properties (total orbital energy, mass(r) profile, freq of orbit captures)
+## - WEBDA specifically for star cluster catalogs!
+## Model gravitational contributions of IM and DM halos
+## Determine if a star achieves escape velocity and remove star after a certain distance from the group
+## Add button to re-center the cluster on the group
+## Add a faint, fixed star background for aesthetics
+## Model uniform mass density extending though space to infinity
+
+
+## COMPLETED IMPROVEMENTS
+##
+## Code in IMF for initializing populaiton
+## Rework with real-world units and scale to fit screen as needed
+## Create ghost trails for particles
+## Model in 3 dimensions
+## Zoom and translational controls
+
+
+## STELLAR COLOR SPECTRUM TRANSISITONS
+##
+## (255, 000, 000)    -->       RED    .
+## (255, 255, 000)    -->    YELLOW    ..
+## (000, 000, 255)    -->      BLUE    ....
+## (255, 255, 255)    -->     WHITE    ........
