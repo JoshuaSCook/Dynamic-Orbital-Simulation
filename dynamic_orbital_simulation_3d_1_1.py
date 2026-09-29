@@ -3,46 +3,6 @@ import sys
 import random
 import numpy as np
 import scipy.integrate as integrate
-import matplotlib
-import csv
-import config
-
-
-# # READ
-# with open('data.csv', mode='r', newline='', encoding='utf-8') as file:
-#     reader = csv.reader(file)
-#     header = next(reader)  # Skips and saves the header row
-#     for row in reader:
-#         print(row)  # Each row is a list of strings
-
-# # WRITE
-# data = [
-#     ['Name', 'Age', 'City'],
-#     ['Alice', '30', 'New York'],
-#     ['Bob', '25', 'Los Angeles']
-# ]
-
-# with open('output.csv', mode='w', newline='', encoding='utf-8') as file:
-#     writer = csv.writer(file)
-#     writer.writerows(data)
-
-
-# SETUP & CONFIGURATION CONSTANTS
-SCREEN_SIZE = 1000
-FPS = 60
-
-# PHYSICAL CONSTANTS
-G = 6.6743e-11 # Gravitational Constant
-SOLAR_MASS = 1.989e30
-SECONDS_PER_YEAR = 3.154e7
-METERS_PER_LY = 9.461e15
-
-# COLORS
-BLACK = (0, 0, 0)
-GREY = (50, 50, 50)
-WHITE = (255, 255, 255)
-YELLOW = (255, 255, 0)
-BLUE = (0, 0, 255)
 
 
 # DATA SETS
@@ -61,14 +21,46 @@ solar_system_bodies = [
 ]
 
 
+# SETUP & CONFIGURATION CONSTANTS
+SCREEN_SIZE = 1000
+FPS = 60
+
+# PHYSICAL CONSTANTS
+G = 6.6743e-11 # Gravitational Constant
+SOLAR_MASS = 1.989e30
+SECONDS_PER_YEAR = 3.154e7
+METERS_PER_LY = 9.461e15
+
+# PHYSICAL ENVIRONMENTAL CONSTANTS
+THREE_D = True
+POPULATION_SIZE = 100
+dt = 50000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
+SOFTENING = 1e16
+
+# FUNCTIONAL VARIABLES
+MOVEMENT_FACTOR = BOX_DIMENSIONS / 200 # Determines rate at which the space moves when using the translational arrow keys
+CELL_SIZE = SCREEN_SIZE / 10 # Size of each grid square (640 / 40 = 16 cells wide/high)
+BACKGROUND_COLOR = (0, 0, 0)
+GRID_COLOR = (40, 40, 40)
+TRAIL_COLOR = (100, 100, 100)
+TRAILING_DATA_LENGTH = 250 # how long is the tail
+
+# COLORS
+BLACK = (0, 0, 0)
+GREY = (50, 50, 50)
+WHITE = (255, 255, 255)
+YELLOW = (255, 255, 0)
+BLUE = (0, 0, 255)
+
+
 # CLASSES
-################################################################
 # ----------------------------------------------------------------
+
 # PHYSICS ENTITY CLASS
 class Particle:
     """ Tracks precision physical attributes and updates state """
     def __init__(self, x, y, z, vx, vy, vz, mass):
-
         # Always use floating-point numbers for physics calculations
         self.mass = float(mass)
         self.x = float(x)
@@ -88,12 +80,10 @@ class Particle:
         self.x_scale_factor = 1.0
         self.y_scale_factor = 1.0
         self.draw_radius = 0.0 # interger render pixel size (derived from mass)
-        self.color = list(BLACK)
-        self.color = list(WHITE)
+        self.color = [0, 0, 0]
 
         self.trailing_data_initial_point = [0.0, 0.0]
         self.trailing_data = []
-        self.trailing_data_length = 1000 # how long is the tail
 
     # Physics calculation methods
     def update_acceleration(self, x_m, y_m, z_m, mass_m):
@@ -105,7 +95,7 @@ class Particle:
         dx = self.x - x_m
         dy = self.y - y_m
         dz = self.z - z_m
-        mag_r_cubed = ((dx**2) + (dy**2) + (dz**2) + (config.SOFTENING**2)) ** (3/2) # calculate mag of ||r||^3
+        mag_r_cubed = ((dx**2) + (dy**2) + (dz**2) + (SOFTENING**2)) ** (3/2) # calculate mag of ||r||^3
         a_constants = (-1) * G * mass_m / mag_r_cubed # define constants
         # multiply dx, dy and dz by constants to get ax, ay and az
         self.ax += dx * a_constants 
@@ -119,9 +109,9 @@ class Particle:
         velocity of the orbiting body. (v = v + a * dt)
         """
         # multiply a * dt
-        adtx = self.ax * config.dt 
-        adty = self.ay * config.dt
-        adtz = self.az * config.dt
+        adtx = self.ax * dt 
+        adty = self.ay * dt
+        adtz = self.az * dt
         # add v + adt
         self.vx += adtx 
         self.vy += adty
@@ -134,32 +124,32 @@ class Particle:
         velocity of the orbiting body. (r = r + v * dt)
         """
         # multiply v * dt
-        vdtx = self.vx * config.dt 
-        vdty = self.vy * config.dt
-        vdtz = self.vz * config.dt
+        vdtx = self.vx * dt 
+        vdty = self.vy * dt
+        vdtz = self.vz * dt
         # add r + vdt
         self.x += vdtx 
         self.y += vdty
         self.z += vdtz
 
         # Scales the position coordinates to fit the screen size
-        self.scale_x = self.x_scale_factor * SCREEN_SIZE * (self.x / config.BOX_DIMENSIONS)
-        self.scale_y = self.y_scale_factor * SCREEN_SIZE * (self.y / config.BOX_DIMENSIONS)
-        self.scale_z = SCREEN_SIZE * (self.z / config.BOX_DIMENSIONS)
+        self.scale_x = self.x_scale_factor * SCREEN_SIZE * (self.x / BOX_DIMENSIONS)
+        self.scale_y = self.y_scale_factor * SCREEN_SIZE * (self.y / BOX_DIMENSIONS)
+        self.scale_z = SCREEN_SIZE * (self.z / BOX_DIMENSIONS)
 
         self.trailing_data_initial_point = [self.scale_x, self.scale_y]
         
-        self.draw_radius = 1000 * (self.mass * (self.scale_z + 800) / SCREEN_SIZE / 1.5e29) # scales draw_radius with mass AND distance from viewer
+        self.draw_radius = 0.2 * (self.mass * (self.scale_z + 800) / SCREEN_SIZE / 1.5e29) # scales draw_radius with mass AND distance from viewer
         if self.draw_radius < 1.0:
             self.draw_radius = 1.0
-        if self.draw_radius > 6.0:
-            self.draw_radius = 6.0
-        # self.draw_radius = 5.0
 
-        # if self.scale_z >= 0.0 and self.scale_z <= SCREEN_SIZE:
-        #     self.color[0] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # R-channel
-        #     self.color[1] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # B-channel
-        #     self.color[2] = abs(int(220 * (self.scale_z / SCREEN_SIZE))) # G-channel            
+        if THREE_D == False:
+            self.color = [255, 255, 255]
+        elif self.scale_z >= 0.0 and self.scale_z <= SCREEN_SIZE:
+            self.color[0] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # R-channel
+            self.color[1] = abs(int(255 * (self.scale_z / SCREEN_SIZE))) # B-channel
+            self.color[2] = abs(int(220 * (self.scale_z / SCREEN_SIZE))) # G-channel
+                   
 
     def update_trailing_data(self):
         """"""
@@ -168,7 +158,7 @@ class Particle:
         if len(self.trailing_data) == 0:
             self.trailing_data.append([self.trailing_data_initial_point, [self.scale_x, self.scale_y]])
         
-        elif len(self.trailing_data) < self.trailing_data_length:
+        elif len(self.trailing_data) < TRAILING_DATA_LENGTH:
             self.trailing_data.append([self.trailing_data[-1][1], [self.scale_x, self.scale_y]])
         
         else:
@@ -186,14 +176,14 @@ class Particle:
         trail_color_z = trail_color
         for i in self.trailing_data:
             pygame.draw.line(surface, trail_color_z, i[0], i[1], width=1)
-            if trail_color_z[0] < config.TRAIL_COLOR[0]:
+            if trail_color_z[0] < TRAIL_COLOR[0]:
                 trail_color[0] += 1
                 trail_color[1] += 1
                 trail_color[2] += 1
-                # trail_color_z = [abs(int(trail_color[0]) * (self.scale_z / SCREEN_SIZE) * self.draw_radius/5),
-                #                  abs(int(trail_color[1]) * (self.scale_z / SCREEN_SIZE) * self.draw_radius/5),
-                #                  abs(int(trail_color[2]) * (self.scale_z / SCREEN_SIZE) * self.draw_radius/5)
-                #                  ]
+                trail_color_z = [abs(int(trail_color[0]) * (self.scale_z / SCREEN_SIZE)),
+                                 abs(int(trail_color[1]) * (self.scale_z / SCREEN_SIZE)),
+                                 abs(int(trail_color[2]) * (self.scale_z / SCREEN_SIZE))
+                                 ]
             else:
                 pass
 
@@ -206,7 +196,7 @@ class ParticlePopulation:
     def __init__(self):
         self.population = []
 
-    def generate_random_particle(self, pos_range=(0, config.BOX_DIMENSIONS), vel_range=(-10, 10), mass_range=(1.5e29, 6.0e32)):
+    def generate_random_particle(self, pos_range=(0, BOX_DIMENSIONS), vel_range=(-100, 100), mass_range=(1.5e29, 6.0e32)):
         """ Generates a single particle with random values within specified limits. """
         # mass = random.uniform(*mass_range) # use if we want a uniform IMF
         a_scale = mass_range[0] / SOLAR_MASS
@@ -218,15 +208,15 @@ class ParticlePopulation:
         position = [random.uniform(*pos_range) for _ in range(3)]
         x = position[0]
         y = position[1]
-        if config.THREE_D == True:
+        if THREE_D == True:
             z = position[2]
         else:
-            z = config.BOX_DIMENSIONS
+            z = BOX_DIMENSIONS
 
         velocity = [random.uniform(*vel_range) for _ in range(3)]
         vx = velocity[0]
         vy = velocity[1]
-        if config.THREE_D == True:
+        if THREE_D == True:
             vz = velocity[2]
         else:
             vz = 0.0
@@ -242,7 +232,7 @@ class ParticlePopulation:
 
 
 # FUNCTIONS
-################################################################
+# ----------------------------------------------------------------
 
 def bounded_exponential_decay(a, b, lambd=2.35):
     """ Returns a randomly generated number (stellar mass) according to an exponential
@@ -271,25 +261,43 @@ def bounded_exponential_decay(a, b, lambd=2.35):
 
 
 def draw_grid_lines(screen, x_offset, y_offset):
-    start_x = int(x_offset % config.CELL_SIZE)
-    start_y = int(y_offset % config.CELL_SIZE)
+    start_x = int(x_offset % CELL_SIZE)
+    start_y = int(y_offset % CELL_SIZE)
 
     # Draw vertical lines from top to bottom
-    for x in range(start_x, SCREEN_SIZE + int(config.CELL_SIZE), int(config.CELL_SIZE)):
-        pygame.draw.line(screen, config.GRID_COLOR, (x, 0), (x, SCREEN_SIZE))
+    for x in range(start_x, SCREEN_SIZE + int(CELL_SIZE), int(CELL_SIZE)):
+        pygame.draw.line(screen, GRID_COLOR, (x, 0), (x, SCREEN_SIZE))
         
     # Draw horizontal lines from left to right
-    for y in range(start_y, SCREEN_SIZE + int(config.CELL_SIZE), int(config.CELL_SIZE)):
-        pygame.draw.line(screen, config.GRID_COLOR, (0, y), (SCREEN_SIZE, y))
+    for y in range(start_y, SCREEN_SIZE + int(CELL_SIZE), int(CELL_SIZE)):
+        pygame.draw.line(screen, GRID_COLOR, (0, y), (SCREEN_SIZE, y))
 
 
 # MAIN SIMULATION LOOP
-################################################################
+# ----------------------------------------------------------------
 
 def main():
     """ Contains the main program loop. It initiates the simulations and processes
     the main physics updates and handles the rendering updates each loop.
     """
+    # # READ
+    # with open('data.csv', mode='r', newline='', encoding='utf-8') as file:
+    #     reader = csv.reader(file)
+    #     header = next(reader)  # Skips and saves the header row
+    #     for row in reader:
+    #         print(row)  # Each row is a list of strings
+
+    # # WRITE
+    # data = [
+    #     ['Name', 'Age', 'City'],
+    #     ['Alice', '30', 'New York'],
+    #     ['Bob', '25', 'Los Angeles']
+    # ]
+
+    # with open('output.csv', mode='w', newline='', encoding='utf-8') as file:
+    #     writer = csv.writer(file)
+    #     writer.writerows(data)
+
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_SIZE, SCREEN_SIZE))
     pygame.display.set_caption("DYNAMIC ORBITAL SIMULATION")
@@ -298,17 +306,18 @@ def main():
     t_elapsed = 0.0
     x_offset = 0.0
     y_offset = 0.0
+    global CELL_SIZE
+    global TRAIL_COLOR
+    global POPULATION_SIZE
+    global SOFTENING
+    global dt
+    global THREE_D
+    global BOX_DIMENSIONS
+    global MOVEMENT_FACTOR
 
     # Instantiate our physics object(s)
     cluster = ParticlePopulation()
-    # cluster.generate_multiple(count=POPULATION_SIZE)
-
-    ####
-    for body in solar_system_bodies:
-        ss_object = (Particle(x=body[2], y=body[3], z=0.0, vx=body[4], vy=body[5], vz=0.0, mass=body[0]))
-        cluster.population.append(ss_object)
-
-    ####
+    cluster.generate_multiple(count=POPULATION_SIZE)
     
     running = True
     while running:
@@ -322,51 +331,80 @@ def main():
 
         if keys[pygame.K_UP]:
             for k in range(len(cluster.population)):
-                cluster.population[k].y += config.MOVEMENT_FACTOR
-            y_offset += SCREEN_SIZE * (config.MOVEMENT_FACTOR / config.BOX_DIMENSIONS)
+                cluster.population[k].y += MOVEMENT_FACTOR
+            y_offset += SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
 
         if keys[pygame.K_DOWN]:
             for k in range(len(cluster.population)):
-                cluster.population[k].y -= config.MOVEMENT_FACTOR
-            y_offset -= SCREEN_SIZE * (config.MOVEMENT_FACTOR / config.BOX_DIMENSIONS)
+                cluster.population[k].y -= MOVEMENT_FACTOR
+            y_offset -= SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
 
         if keys[pygame.K_LEFT]:
             for k in range(len(cluster.population)):
-                cluster.population[k].x += config.MOVEMENT_FACTOR
-            x_offset += SCREEN_SIZE * (config.MOVEMENT_FACTOR / config.BOX_DIMENSIONS)
+                cluster.population[k].x += MOVEMENT_FACTOR
+            x_offset += SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
 
         if keys[pygame.K_RIGHT]:
             for k in range(len(cluster.population)):
-                cluster.population[k].x -= config.MOVEMENT_FACTOR
-            x_offset -= SCREEN_SIZE * (config.MOVEMENT_FACTOR / config.BOX_DIMENSIONS)
+                cluster.population[k].x -= MOVEMENT_FACTOR
+            x_offset -= SCREEN_SIZE * (MOVEMENT_FACTOR / BOX_DIMENSIONS)
 
         ## unfortunately the way this is set up alters and affects the physics
         ## i need to totally rething the zoom from the ground up
         ## the arrow keys should be fine as is since theyre just applying translation
         if keys[pygame.K_EQUALS]:
             for k in range(len(cluster.population)):
-                cluster.population[k].z += config.MOVEMENT_FACTOR
+                cluster.population[k].z += MOVEMENT_FACTOR
                 cluster.population[k].x_scale_factor *= 1.01
                 cluster.population[k].y_scale_factor *= 1.01
             CELL_SIZE = CELL_SIZE * 1.01
 
         if keys[pygame.K_MINUS]:
             for k in range(len(cluster.population)):
-                cluster.population[k].z -= config.MOVEMENT_FACTOR
+                cluster.population[k].z -= MOVEMENT_FACTOR
                 cluster.population[k].x_scale_factor /= 1.01
                 cluster.population[k].y_scale_factor /= 1.01
             CELL_SIZE = CELL_SIZE / 1.01
+
+        if keys[pygame.K_r]:
+            THREE_D = True
+            POPULATION_SIZE = 100
+            dt = 50000 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+            BOX_DIMENSIONS = 10 * METERS_PER_LY # Dimentions of the contained simulation space (ly * meters_per_ly)
+            SOFTENING = 1e16
+            MOVEMENT_FACTOR = BOX_DIMENSIONS / 200
+            cluster.population = []
+            cluster.generate_multiple(count=POPULATION_SIZE)
+
+        if keys[pygame.K_s]:
+            THREE_D = False
+            dt = 0.01 * SECONDS_PER_YEAR # Time interval (years * seconds_per_year) - Calculated per frame
+            BOX_DIMENSIONS = 1e13
+            SOFTENING = 1e8
+            MOVEMENT_FACTOR = BOX_DIMENSIONS / 200
+            cluster.population = []
+            for body in solar_system_bodies:
+                ss_object = (Particle(x=body[2] + (BOX_DIMENSIONS/2), y=body[3] + (BOX_DIMENSIONS/2), z=-BOX_DIMENSIONS, vx=body[4], vy=body[5], vz=0.0, mass=body[0]))
+                cluster.population.append(ss_object)
+
+            if keys[pygame.K_z]:
+                THREE_D = True
+
+            if keys[pygame.K_x]:
+                THREE_D = False
+                for i in range(len(cluster.population)):
+                    cluster.population[i].z = -BOX_DIMENSIONS
+                    cluster.population[i].vz = 0.0
+                    cluster.population[i].az = 0.0
 
 
         # CALCULATE AND RENDER FPS
         current_fps = clock.get_fps()
         fps_text = font.render(f"FPS: {round(current_fps, 1)}", True, (255, 255, 255))
 
-
         # CALCULATE AND RENDER SIMULATION TIME ELAPSED
-        t_elapsed += config.dt / SECONDS_PER_YEAR
+        t_elapsed += dt / SECONDS_PER_YEAR
         t_elapsed_text = font.render("t = " + f"{int(t_elapsed):,}" + " years", True, (255, 255, 255))
-
 
         # PHYSICS & LOGIC UPDATES
         # class methods to run calculations and update new positions and velocities
@@ -385,7 +423,7 @@ def main():
 
 
         # RENDERING (Clear -> Draw -> Flip)
-        screen.fill(config.BACKGROUND_COLOR)  # Clear screen with dark gray
+        screen.fill(BACKGROUND_COLOR)  # Clear screen with dark gray
         draw_grid_lines(screen, x_offset, y_offset)
         # _.draw here
         for i in cluster.population:
@@ -408,8 +446,9 @@ if __name__ == "__main__":
     main()
 
 
-## FUTURE IMPROVEMENTS
-##
+# FUTURE IMPROVEMENTS
+# ----------------------------------------------------------------
+
 ## Code in some preset systems - i.e. a stable solar system (need to determine initial starting conditions
 ## Fix FPS issues. sim can run at whatever speed dt*CPS (calculations/sec) but only update the screen at 60 FPS
 ## ---- Define what we want on the screen - i.e. 100,000 yrs per sec
@@ -444,5 +483,5 @@ if __name__ == "__main__":
 ##
 ## (255, 000, 000)    -->       RED    .
 ## (255, 255, 000)    -->    YELLOW    ..
-## (000, 000, 255)    -->      BLUE    ....
-## (255, 255, 255)    -->     WHITE    ........
+## (255, 255, 255)    -->     WHITE    ....
+## (000, 000, 255)    -->      BLUE    ........
