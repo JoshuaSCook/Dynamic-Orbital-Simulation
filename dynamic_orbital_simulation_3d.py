@@ -348,14 +348,14 @@ def main():
                 cluster.population[k].z += config.MOVEMENT_FACTOR
                 cluster.population[k].x_scale_factor *= 1.01
                 cluster.population[k].y_scale_factor *= 1.01
-            CELL_SIZE = CELL_SIZE * 1.01
+            config.CELL_SIZE = config.CELL_SIZE * 1.01
 
         if keys[pygame.K_MINUS]:
             for k in range(len(cluster.population)):
                 cluster.population[k].z -= config.MOVEMENT_FACTOR
                 cluster.population[k].x_scale_factor /= 1.01
                 cluster.population[k].y_scale_factor /= 1.01
-            CELL_SIZE = CELL_SIZE / 1.01
+            config.CELL_SIZE = config.CELL_SIZE / 1.01
 
 
         # CALCULATE AND RENDER FPS
