@@ -169,7 +169,7 @@ class SolarSystemSimulation:
 
     def run(self):
         # Time-step progression: 86400 seconds = 1 earth day passing per frame
-        total_dt = 86400
+        total_dt = 86400 * 10
         # Sub-steps to prevent numerical blowing up
         sub_steps = 1000 
         dt = total_dt / sub_steps
